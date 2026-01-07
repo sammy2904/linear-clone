@@ -1,4 +1,5 @@
 "use client"
+export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react"
 import { createAITask, deleteAllTasks, toggleTaskStatus } from "./actions" 
 import { Button } from "@/components/ui/button"
