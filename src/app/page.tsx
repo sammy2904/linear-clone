@@ -3,13 +3,14 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react"
 import { createAITask, deleteAllTasks, toggleTaskStatus } from "./actions" 
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PlusCircle, LayoutGrid, CheckCircle2, Circle } from "lucide-react"
-import { createClient } from "@supabase/supabase-js"
 
 export default function Home() {
+  // 1. ADDED BACK MISSING STATES
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -18,19 +19,9 @@ export default function Home() {
   const [filterPriority, setFilterPriority] = useState("All");
 
   useEffect(() => {
-    // We only run this in the browser (client-side)
-    if (typeof window === "undefined") return;
-
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    // This is the "Nuclear" safety check
-    if (!url || url === "" || !url.startsWith('http')) {
-      console.warn("Supabase URL is not ready yet.");
-      return;
-    }
-
-    const supabase = createClient(url, key!);
+    // Safety: Don't fetch if keys aren't actually loaded yet or if using placeholder
+    const isPlaceholder = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co';
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || isPlaceholder) return;
 
     const fetchTasks = async () => {
       const { data } = await supabase
@@ -47,11 +38,9 @@ export default function Home() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks())
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
-
+  
   const handleCreateAI = async () => {
     if (!inputValue) return;
     setIsLoading(true);
@@ -120,7 +109,13 @@ export default function Home() {
 
           {showInput && (
             <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-700 space-y-3">
-              <input className="w-full bg-transparent text-white outline-none" placeholder="Describe task..." autoFocus value={inputValue} onChange={(e) => setInputValue(e.target.value)} />
+              <input 
+                className="w-full bg-transparent text-white outline-none" 
+                placeholder="Describe task..." 
+                autoFocus 
+                value={inputValue} 
+                onChange={(e) => setInputValue(e.target.value)} 
+              />
               <div className="flex justify-end space-x-2">
                 <Button variant="ghost" size="sm" onClick={() => setShowInput(false)}>Cancel</Button>
                 <Button size="sm" className="bg-blue-600 text-white" onClick={handleCreateAI} disabled={isLoading}>
