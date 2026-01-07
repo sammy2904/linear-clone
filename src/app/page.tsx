@@ -1,65 +1,163 @@
-import Image from "next/image";
+"use client"
+import { useState, useEffect } from "react"
+import { createAITask, deleteAllTasks, toggleTaskStatus } from "./actions" 
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { PlusCircle, Inbox, LayoutGrid, CheckCircle2, Circle } from "lucide-react"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(
+  'https://yafbojytyunwunpivcv.supabase.co', 
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhZmhib2p5dHl1bnd1bnBpdmN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzU2MDYsImV4cCI6MjA4MzM1MTYwNn0.ton9t3PlZ96r_fEl-wFc4392VCc8LJ0nv4WY3rr4hZQ'
+)
 
 export default function Home() {
+  const [showInput, setShowInput] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterPriority, setFilterPriority] = useState("All");
+
+  const handleCreateAI = async () => {
+    if (!inputValue) return;
+    setIsLoading(true);
+    try {
+      const aiTask = await createAITask(inputValue); 
+      setTasks(prev => [aiTask, ...prev]);
+      setShowInput(false);
+      setInputValue("");
+    } catch (error) {
+      alert("AI failed to process.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      const { data } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (data) setTasks(data);
+    };
+
+    fetchTasks();
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => { fetchTasks(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex h-screen bg-[#08090a] text-zinc-400 font-sans">
+      <aside className="w-64 border-r border-zinc-800 flex flex-col p-4 space-y-4">
+        <div className="flex items-center space-x-2 px-2 pb-4 text-white font-medium">
+          <div className="w-6 h-6 bg-zinc-700 rounded-sm" />
+          <span>Linear Clone</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+        <nav className="space-y-1">
+          <div className="flex items-center space-x-3 px-2 py-1.5 rounded-md bg-zinc-800 text-white cursor-pointer">
+            <LayoutGrid size={16} /> <span>Issues</span>
+          </div>
+        </nav>
+      </aside>
+
+      <main className="flex-1 flex flex-col">
+        <header className="h-14 border-b border-zinc-800 flex items-center justify-between px-6">
+          <h2 className="text-white font-medium">All Issues</h2>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={async () => { await deleteAllTasks(); setTasks([]); }} className="text-zinc-500 hover:text-red-400">Clear All</Button>
+            <Button onClick={() => setShowInput(true)} variant="secondary" size="sm" className="bg-white text-black hover:bg-zinc-200">
+              <PlusCircle className="mr-2 h-4 w-4" /> New Issue
+            </Button>
+          </div>
+        </header>
+
+        <div className="p-6 space-y-4 max-w-4xl">
+          {/* SEARCH BAR */}
+          <div className="relative">
+            <input 
+              className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md px-4 py-2 text-sm text-zinc-200 outline-none focus:border-zinc-700 transition-colors"
+              placeholder="Search issues..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+
+          {/* PRIORITY FILTERS */}
+          <div className="flex gap-2 mb-4">
+            {["All", "High", "Medium", "Low"].map((p) => (
+              <button
+                key={p}
+                onClick={() => setFilterPriority(p)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  filterPriority === p 
+                    ? "bg-zinc-800 text-white border border-zinc-700" 
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
+          {showInput && (
+            <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-700 space-y-3">
+              <input className="w-full bg-transparent text-white outline-none" placeholder="Describe task..." autoFocus value={inputValue} onChange={(e) => setInputValue(e.target.value)} />
+              <div className="flex justify-end space-x-2">
+                <Button variant="ghost" size="sm" onClick={() => setShowInput(false)}>Cancel</Button>
+                <Button size="sm" className="bg-blue-600 text-white" onClick={handleCreateAI} disabled={isLoading}>
+                  {isLoading ? "Thinking..." : "Create with AI"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {/* ONE SINGLE MAP FOR EVERYTHING */}
+            {tasks
+              .filter(task => {
+                const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesPriority = filterPriority === "All" || task.priority === filterPriority;
+                return matchesSearch && matchesPriority;
+              })
+              .map((task, index) => (
+              <Card key={task.id || index} className="bg-transparent border-zinc-800 hover:bg-zinc-900/50 p-3 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div 
+                    onClick={async () => {
+                      const updated = await toggleTaskStatus(task.id, task.status);
+                      setTasks(tasks.map(t => t.id === task.id ? updated : t));
+                    }}
+                    className="cursor-pointer hover:text-blue-500"
+                  >
+                    {task.status === 'done' ? <CheckCircle2 size={16} className="text-blue-500" /> : <Circle size={16} />}
+                  </div>
+                  <span className="text-zinc-500 text-sm w-12">LIN-{tasks.length - index}</span>
+                  <span className={`${task.status === 'done' ? 'line-through text-zinc-600' : 'text-zinc-200'} text-sm`}>
+                    {task.title}
+                  </span>
+                </div>
+                <Badge variant="outline" className="border-zinc-700 text-zinc-500 text-[10px] uppercase">
+                  {task.priority}
+                </Badge>
+              </Card>
+            ))}
+          </div>
         </div>
       </main>
     </div>
-  );
+  )
 }
