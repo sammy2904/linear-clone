@@ -18,45 +18,38 @@ export default function Home() {
   const [filterPriority, setFilterPriority] = useState("All");
 
   useEffect(() => {
-    // 1. Get keys with empty string fallbacks
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-    
-    // 2. Safety check: Stop here if keys are missing (prevents build crash)
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.warn("Waiting for Supabase environment variables...");
+    // We only run this in the browser (client-side)
+    if (typeof window === "undefined") return;
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    // This is the "Nuclear" safety check
+    if (!url || url === "" || !url.startsWith('http')) {
+      console.warn("Supabase URL is not ready yet.");
       return;
     }
 
-    try {
-      // 3. Initialize client ONLY inside the browser
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createClient(url, key!);
 
-      const fetchTasks = async () => {
-        const { data } = await supabase
-          .from('tasks')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (data) setTasks(data);
-      };
+    const fetchTasks = async () => {
+      const { data } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (data) setTasks(data);
+    };
 
-      fetchTasks();
+    fetchTasks();
 
-      const channel = supabase
-        .channel('schema-db-changes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'tasks' },
-          () => { fetchTasks(); }
-        )
-        .subscribe();
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks())
+      .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    } catch (e) {
-      console.error("Supabase error:", e);
-    }
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleCreateAI = async () => {
