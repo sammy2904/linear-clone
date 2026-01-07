@@ -6,7 +6,7 @@ import { createAITask, deleteAllTasks, toggleTaskStatus } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { PlusCircle, Inbox, LayoutGrid, CheckCircle2, Circle } from "lucide-react"
+import { PlusCircle, LayoutGrid, CheckCircle2, Circle } from "lucide-react"
 import { createClient } from "@supabase/supabase-js"
 
 export default function Home() {
@@ -17,13 +17,47 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState("All");
 
-  // We define a helper to get the client only when needed
-  const getSupabaseClient = () => {
-    return createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    );
-  };
+  useEffect(() => {
+    // 1. Get keys with empty string fallbacks
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    
+    // 2. Safety check: Stop here if keys are missing (prevents build crash)
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.warn("Waiting for Supabase environment variables...");
+      return;
+    }
+
+    try {
+      // 3. Initialize client ONLY inside the browser
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+      const fetchTasks = async () => {
+        const { data } = await supabase
+          .from('tasks')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (data) setTasks(data);
+      };
+
+      fetchTasks();
+
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'tasks' },
+          () => { fetchTasks(); }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } catch (e) {
+      console.error("Supabase error:", e);
+    }
+  }, []);
 
   const handleCreateAI = async () => {
     if (!inputValue) return;
@@ -39,33 +73,6 @@ export default function Home() {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    const supabase = getSupabaseClient();
-    
-    const fetchTasks = async () => {
-      const { data } = await supabase
-        .from('tasks')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (data) setTasks(data);
-    };
-
-    fetchTasks();
-
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks' },
-        () => { fetchTasks(); }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   return (
     <div className="flex h-screen bg-[#08090a] text-zinc-400 font-sans">

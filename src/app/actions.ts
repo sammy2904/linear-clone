@@ -4,25 +4,20 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 
-// Helper function to safely get Supabase
+// We create a helper function so createClient only runs when called
 const getSupabase = () => {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
   );
-};
-
-// Helper function to safely get AI
-const getAI = () => {
-  return createGoogleGenerativeAI({
-    apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || '',
-  });
 };
 
 export async function createAITask(prompt: string) {
   const supabase = getSupabase();
-  const google = getAI();
-  
+  const google = createGoogleGenerativeAI({
+    apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || '',
+  });
+
   try {
     const { object } = await generateObject({
       model: google('gemini-1.5-flash'), 
@@ -41,7 +36,6 @@ export async function createAITask(prompt: string) {
     if (error) throw error;
     return data[0]; 
   } catch (error: any) {
-    console.error("AI Error:", error.message);
     return { title: prompt, priority: "Medium", status: 'todo' };
   }
 }
@@ -59,7 +53,6 @@ export async function toggleTaskStatus(id: string, currentStatus: string) {
     .update({ status: newStatus })
     .eq('id', id)
     .select();
-    
   if (error) throw error;
   return data[0];
 }
