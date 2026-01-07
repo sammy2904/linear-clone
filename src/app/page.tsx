@@ -1,5 +1,6 @@
 "use client"
 export const dynamic = "force-dynamic";
+
 import { useState, useEffect } from "react"
 import { createAITask, deleteAllTasks, toggleTaskStatus } from "./actions" 
 import { Button } from "@/components/ui/button"
@@ -8,11 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { PlusCircle, Inbox, LayoutGrid, CheckCircle2, Circle } from "lucide-react"
 import { createClient } from "@supabase/supabase-js"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 export default function Home() {
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -20,6 +16,14 @@ export default function Home() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState("All");
+
+  // We define a helper to get the client only when needed
+  const getSupabaseClient = () => {
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    );
+  };
 
   const handleCreateAI = async () => {
     if (!inputValue) return;
@@ -37,6 +41,8 @@ export default function Home() {
   };
 
   useEffect(() => {
+    const supabase = getSupabaseClient();
+    
     const fetchTasks = async () => {
       const { data } = await supabase
         .from('tasks')
@@ -87,7 +93,6 @@ export default function Home() {
         </header>
 
         <div className="p-6 space-y-4 max-w-4xl">
-          {/* SEARCH BAR */}
           <div className="relative">
             <input 
               className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md px-4 py-2 text-sm text-zinc-200 outline-none focus:border-zinc-700 transition-colors"
@@ -97,7 +102,6 @@ export default function Home() {
             />
           </div>
 
-          {/* PRIORITY FILTERS */}
           <div className="flex gap-2 mb-4">
             {["All", "High", "Medium", "Low"].map((p) => (
               <button
@@ -127,7 +131,6 @@ export default function Home() {
           )}
 
           <div className="space-y-2">
-            {/* ONE SINGLE MAP FOR EVERYTHING */}
             {tasks
               .filter(task => {
                 const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
