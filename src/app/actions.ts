@@ -4,18 +4,25 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 
+// Helper function to safely get Supabase
+const getSupabase = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  );
+};
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-// ADD THIS PART:
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
-});
+// Helper function to safely get AI
+const getAI = () => {
+  return createGoogleGenerativeAI({
+    apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || '',
+  });
+};
 
 export async function createAITask(prompt: string) {
+  const supabase = getSupabase();
+  const google = getAI();
+  
   try {
     const { object } = await generateObject({
       model: google('gemini-1.5-flash'), 
@@ -40,11 +47,12 @@ export async function createAITask(prompt: string) {
 }
 
 export async function deleteAllTasks() {
+  const supabase = getSupabase();
   await supabase.from('tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 }
 
-// NEW: This updates the status in the database
 export async function toggleTaskStatus(id: string, currentStatus: string) {
+  const supabase = getSupabase();
   const newStatus = currentStatus === 'done' ? 'todo' : 'done';
   const { data, error } = await supabase
     .from('tasks')
