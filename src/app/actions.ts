@@ -4,15 +4,15 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 
-// 1. Initialize Supabase
-const supabase = createClient(
-  'https://yafbojytyunwunpivcv.supabase.co', 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhZmhib2p5dHl1bnd1bnBpdmN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzU2MDYsImV4cCI6MjA4MzM1MTYwNn0.ton9t3PlZ96r_fEl-wFc4392VCc8LJ0nv4WY3rr4hZQ' // <--- PUT YOUR KEY HERE
-);
 
-// 2. Initialize AI
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// ADD THIS PART:
 const google = createGoogleGenerativeAI({
-  apiKey: 'AIzaSyBBqaUxW6lGdinulJ8nHlvI7wzyNxmQfNM4', 
+  apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
 });
 
 export async function createAITask(prompt: string) {

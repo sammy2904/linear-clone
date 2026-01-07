@@ -8,8 +8,8 @@ import { PlusCircle, Inbox, LayoutGrid, CheckCircle2, Circle } from "lucide-reac
 import { createClient } from "@supabase/supabase-js"
 
 const supabase = createClient(
-  'https://yafbojytyunwunpivcv.supabase.co', 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhZmhib2p5dHl1bnd1bnBpdmN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzU2MDYsImV4cCI6MjA4MzM1MTYwNn0.ton9t3PlZ96r_fEl-wFc4392VCc8LJ0nv4WY3rr4hZQ'
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 export default function Home() {
