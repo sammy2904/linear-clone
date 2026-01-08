@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge"
 import { PlusCircle, LayoutGrid, CheckCircle2, Circle } from "lucide-react"
 
 export default function Home() {
-  // 1. ADDED BACK MISSING STATES
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +18,6 @@ export default function Home() {
   const [filterPriority, setFilterPriority] = useState("All");
 
   useEffect(() => {
-    // Safety: Don't fetch if keys aren't actually loaded yet or if using placeholder
     const isPlaceholder = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co';
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || isPlaceholder) return;
 

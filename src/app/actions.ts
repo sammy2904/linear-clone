@@ -4,7 +4,6 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 
-// We create a helper function so createClient only runs when called
 const getSupabase = () => {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
